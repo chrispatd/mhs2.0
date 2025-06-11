@@ -2,9 +2,10 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
-// use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Database\Seeders\MsUserSeeder;
+use Database\Seeders\MsEmployeePositionSeeder;
+use Database\Seeders\MsEmployeeSeeder;
 
 class DatabaseSeeder extends Seeder
 {
@@ -13,11 +14,20 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
-
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
+        // Panggil seeder untuk tabel ms_user
+        $this->call([
+            MsUserSeeder::class,
+            MsEmployeePositionSeeder::class,
+            MsEmployeeSeeder::class,
         ]);
+
+        // Jika masih ingin menggunakan factory bawaan Laravel untuk model User:
+        // \App\Models\User::factory(10)->create();
+
+        // Atau contoh create satu user dengan factory:
+        // \App\Models\User::factory()->create([
+        //     'name'  => 'Test User',
+        //     'email' => 'test@example.com',
+        // ]);
     }
 }

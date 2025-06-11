@@ -1,42 +1,83 @@
 <?php
 
-use App\Models\User;
+use App\Models\MsUser;
+use App\Models\MsEmployee;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
+use Illuminate\Validation\Rule;  
+use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
 
 new #[Layout('components.layouts.auth')] class extends Component {
-    public string $name = '';
-    public string $email = '';
-    public string $password = '';
+    public string $name                  = '';
+    public string $email                 = '';
+    public string $password              = '';
     public string $password_confirmation = '';
+    public string $teacher_code          = '';  // NIP/NIY
 
     /**
      * Handle an incoming registration request.
      */
     public function register(): void
     {
+        // 1. Validasi input
         $validated = $this->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:' . User::class],
-            'password' => ['required', 'string', 'confirmed', Rules\Password::defaults()],
+            'name'                  => ['required', 'string', 'max:255'],
+            'email'                 => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:ms_user,email'],
+            'password'              => ['required', 'string', 'confirmed', Rules\Password::defaults()],
+            'teacher_code' => [
+            'required', 'string',
+            // harus unik di ms_user.teacher_code
+            Rule::unique('ms_user', 'teacher_code'),
+            // dan juga harus ada di ms_employee.teacher_code
+            function($attr, $value, $fail) {
+                if (! MsEmployee::where('teacher_code', $value)->exists()) {
+                    $fail("NIP/NIY “{$value}” not registered as an employee.");
+                }
+            },
+        ],
         ]);
 
+        // 2. Hash password
         $validated['password'] = Hash::make($validated['password']);
 
-        event(new Registered(($user = User::create($validated))));
+        // 3. Buat user di tabel ms_user
+        $user = MsUser::create([
+            'role_id'               => null,
+            'role_access_id'        => null,
+            'employee_id'           => null,
+            'teacher_code'          => $validated['teacher_code'],
+            'code_type'             => null,
+            'is_homeroomteacher'    => false,
+            'is_super_user'         => false,
+            'is_score_spiritual'    => false,
+            'is_score_sosial'       => false,
+            'ppdb_access'           => null,
+            'email'                 => $validated['email'],
+            'username'              => $validated['email'], // atau nama lain
+            'password'              => $validated['password'],
+            'active_semester_id'    => null,
+            'active_school_year_id' => null,
+            'remember_token'        => null,
+        ]);
 
+        // 4. Event & login
+        event(new Registered($user));
         Auth::login($user);
 
+        // 5. Redirect ke dashboard
         $this->redirectIntended(route('dashboard', absolute: false), navigate: true);
     }
 }; ?>
 
 <div class="flex flex-col gap-6">
-    <x-auth-header :title="__('Create an account')" :description="__('Enter your details below to create your account')" />
+    <x-auth-header
+        :title="__('Create an account')"
+        :description="__('Enter your details below to create your account')"
+    />
 
     <!-- Session Status -->
     <x-auth-session-status class="text-center" :status="session('status')" />
@@ -45,12 +86,12 @@ new #[Layout('components.layouts.auth')] class extends Component {
         <!-- Name -->
         <flux:input
             wire:model="name"
-            :label="__('Name')"
+            :label="__('Full name')"
             type="text"
             required
             autofocus
             autocomplete="name"
-            :placeholder="__('Full name')"
+            placeholder="John Doe"
         />
 
         <!-- Email Address -->
@@ -63,6 +104,15 @@ new #[Layout('components.layouts.auth')] class extends Component {
             placeholder="email@example.com"
         />
 
+        <!-- NIP / NIY -->
+        <flux:input
+            wire:model="teacher_code"
+            :label="__('NIP / NIY')"
+            type="text"
+            required
+            placeholder="Contoh: 12345678"
+        />
+       
         <!-- Password -->
         <flux:input
             wire:model="password"
@@ -70,7 +120,6 @@ new #[Layout('components.layouts.auth')] class extends Component {
             type="password"
             required
             autocomplete="new-password"
-            :placeholder="__('Password')"
             viewable
         />
 
@@ -81,7 +130,6 @@ new #[Layout('components.layouts.auth')] class extends Component {
             type="password"
             required
             autocomplete="new-password"
-            :placeholder="__('Confirm password')"
             viewable
         />
 
