@@ -13,7 +13,8 @@ class ProfileUpdateTest extends TestCase
 
     public function test_profile_page_is_displayed(): void
     {
-        $this->actingAs($user = User::factory()->create());
+        $user = User::factory()->create();
+        $this->actingAs($user);
 
         $this->get('/settings/profile')->assertOk();
     }
@@ -69,7 +70,7 @@ class ProfileUpdateTest extends TestCase
             ->assertRedirect('/');
 
         $this->assertNull($user->fresh());
-        $this->assertFalse(auth()->check());
+        $this->assertFalse(\Illuminate\Support\Facades\Auth::check());
     }
 
     public function test_correct_password_must_be_provided_to_delete_account(): void
