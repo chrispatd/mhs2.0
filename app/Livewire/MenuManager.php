@@ -14,13 +14,27 @@ class MenuManager extends Component
 {
     use WithPagination;
 
-    public $menu_id, $name, $route, $icon, $order;
+    public $menu_id, $name, $route, $icon, $order, $parent_id;
     public $isModalOpen = false;
+
+    public $availableIcons = [
+        'home' => 'Home',
+        'user' => 'User',
+        'cph' => 'Cog',
+        'chart-bar' => 'Chart Bar',
+        'calendar' => 'Calendar',
+        'bell' => 'Bell',
+        'bookmark' => 'Bookmark',
+        'camera' => 'Camera',
+        'check-circle' => 'Check Circle',
+    ];
 
     public function render()
     {
         return view('livewire.menu-manager', [
-            'menus' => MsMenu::orderBy('order', 'asc')->paginate(10)
+            'menus' => MsMenu::with('submenus')->orderBy('order', 'asc')->paginate(10),
+            'icons' => $this->availableIcons,
+            'parentMenus' => MsMenu::whereNull('parent_id')->orderBy('name', 'asc')->get(),
         ]);
     }
 
@@ -47,6 +61,7 @@ class MenuManager extends Component
         $this->route = '';
         $this->icon = '';
         $this->order = 0;
+        $this->parent_id = '';
     }
 
     public function store()
@@ -54,8 +69,9 @@ class MenuManager extends Component
         $this->validate([
             'name' => 'required|string|max:255',
             'route' => 'required|string|max:255',
-            'icon' => 'required|string|max:255',
+            'icon' => 'required|string|max:255|in:' . implode(',', array_keys($this->availableIcons)),
             'order' => 'required|integer',
+            'parent_id' => 'nullable|exists:ms_menu,id|not_in:' . ($this->menu_id ?: 0),
         ]);
 
         MsMenu::updateOrCreate(['id' => $this->menu_id], [
@@ -63,6 +79,7 @@ class MenuManager extends Component
             'route' => $this->route,
             'icon' => $this->icon,
             'order' => $this->order,
+            'parent_id' => $this->parent_id ?: null,
         ]);
 
         session()->flash(
@@ -82,13 +99,19 @@ class MenuManager extends Component
         $this->route = $menu->route;
         $this->icon = $menu->icon;
         $this->order = $menu->order;
+        $this->parent_id = $menu->parent_id;
 
         $this->openModal();
     }
 
     public function delete($id)
     {
-        MsMenu::find($id)->delete();
+        $menu = MsMenu::findOrFail($id);
+        if ($menu->submenus()->count() > 0) {
+            session()->flash('message', 'Tidak dapat menghapus menu karena memiliki submenu.');
+            return;
+        }
+        $menu->delete();
         session()->flash('message', 'Menu Berhasil Dihapus.');
     }
 }

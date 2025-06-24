@@ -17,5 +17,16 @@ class MsMenu extends Model
         'route',
         'icon',
         'order',
+        'parent_id'
     ];
+
+    public function submenus()
+    {
+        return $this->hasMany(MsMenu::class, 'parent_id');
+    }
+
+    public function parent()
+    {
+        return $this->belongsTo(MsMenu::class, 'parent_id');
+    }
 }

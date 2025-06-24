@@ -1,5 +1,5 @@
 <x-layouts.app.sidebar :title="$title ?? null">
-    <flux:main>
+    <flux:main class="h-screen overflow-hidden">
         <div class="flex items-center justify-end w-full p-3 mb-6 bg-white dark:bg-zinc-800 rounded-xl shadow-lg">
             {{-- Grup untuk konten yang rata kanan --}}
             <div class="flex items-center gap-4">

@@ -25,52 +25,93 @@
 
             {{-- ======================= START: BAGIAN MENU UTAMA ======================= --}}
             <flux:navlist.group :heading="__('Platform')" class="grid">
+                {{-- Loop untuk menampilkan menu utama dari database --}}
+                @isset($dynamicMenus)
+                    @foreach ($dynamicMenus->where('parent_id', null) as $menu)
+                        <div x-data="{ open: localStorage.getItem('menu_{{{ $menu->id }}}') === 'true' }" class="relative">
+                            <div class="flex items-center w-full">
+                                {{-- Parent Menu with Arrow Outside --}}
+                                @if (Route::has($menu->route))
+                                    <flux:navlist.item 
+                                        :icon="$menu->icon" 
+                                        :href="route($menu->route)" 
+                                        :current="request()->routeIs($menu->route)" 
+                                        wire:navigate
+                                        class="flex-1">
+                                        {{ __($menu->name) }}
+                                    </flux:navlist.item>
+                                    @if($menu->submenus->count())
+                                        <button @click.stop.prevent="open = !open; localStorage.setItem('menu_{{{ $menu->id }}}', open)" class="ml-2 focus:outline-none">
+                                            <svg x-bind:class="{ 'rotate-180': open }" class="h-5 w-5 transform transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                        </button>
+                                    @endif
+                                @else
+                                    <flux:navlist.item 
+                                        :icon="$menu->icon" 
+                                        href="#"
+                                        title="Route '{{ $menu->route }}' untuk menu ini belum dibuat"
+                                        class="flex-1 opacity-60 cursor-not-allowed">
+                                        {{ __($menu->name) }}
+                                    </flux:navlist.item>
+                                    @if($menu->submenus->count())
+                                        <button @click.stop.prevent="open = !open; localStorage.setItem('menu_{{{ $menu->id }}}', open)" class="ml-2 focus:outline-none">
+                                            <svg x-bind:class="{ 'rotate-180': open }" class="h-5 w-5 transform transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                        </button>
+                                    @endif
+                                @endif
+                            </div>
 
-    {{-- Loop untuk menampilkan SEMUA menu dari database --}}
-    @isset($dynamicMenus)
-        @foreach ($dynamicMenus as $menu)
-        
-            {{-- Cek apakah route untuk menu ini sudah ada --}}
-            @if (Route::has($menu->route))
+                            {{-- Submenu Accordion with Dynamic Background --}}
+                            @if($menu->submenus->count())
+                                <div x-show="open" 
+                                     x-transition:enter="transition ease-in-out duration-300" 
+                                     x-transition:enter-start="opacity-0 -translate-y-4" 
+                                     x-transition:enter-end="opacity-100 translate-y-0" 
+                                     x-transition:leave="transition ease-in-out duration-250" 
+                                     x-transition:leave-start="opacity-100 translate-y-0" 
+                                     x-transition:leave-end="opacity-0 -translate-y-4" 
+                                     class="pl-6"
+                                     x-bind:style="'background-color: ' + sidebarColor">
+                                    @foreach($menu->submenus as $submenu)
+                                        @if (Route::has($submenu->route))
+                                            <flux:navlist.item 
+                                                :icon="$submenu->icon" 
+                                                :href="route($submenu->route)" 
+                                                :current="request()->routeIs($submenu->route)" 
+                                                wire:navigate
+                                                class="py-2 text-sm">
+                                                {{ __($submenu->name) }}
+                                            </flux:navlist.item>
+                                        @else
+                                            <flux:navlist.item 
+                                                :icon="$submenu->icon" 
+                                                href="#"
+                                                title="Route '{{ $submenu->route }}' untuk menu ini belum dibuat"
+                                                class="py-2 text-sm opacity-60 cursor-not-allowed">
+                                                {{ __($submenu->name) }}
+                                            </flux:navlist.item>
+                                        @endif
+                                    @endforeach
+                                </div>
+                            @endif
+                        </div>
+                    @endforeach
+                @endisset
 
-                {{-- JIKA ROUTE ADA: Menu bisa diklik dan aktif --}}
+                {{-- Menu statis untuk link ke halaman manajemen --}}
                 <flux:navlist.item 
-                    :icon="$menu->icon" 
-                    :href="route($menu->route)" 
-                    :current="request()->routeIs($menu->route)" 
+                    icon="cog" 
+                    :href="route('menus.manage')" 
+                    :current="request()->routeIs('menus.manage')" 
                     wire:navigate>
-                    {{ __($menu->name) }}
+                    {{ __('Manage Menu') }}
                 </flux:navlist.item>
-
-            @else
-
-                {{-- JIKA ROUTE TIDAK ADA: Menu tetap ditampilkan tapi tidak aktif --}}
-                <flux:navlist.item 
-                    :icon="$menu->icon"  {{-- Ikon tetap ditampilkan --}}
-                    href="#"
-                    title="Route '{{ $menu->route }}' untuk menu ini belum dibuat"
-                    class="opacity-60 cursor-not-allowed"
-                >
-                    {{ __($menu->name) }}
-                </flux:navlist.item>
-
-            @endif
-
-        @endforeach
-    @endisset
-    
-    {{-- Menu statis untuk link ke halaman manajemen --}}
-    <flux:navlist.item 
-        icon="cog" 
-        :href="route('menus.manage')" 
-        :current="request()->routeIs('menus.manage')" 
-        wire:navigate>
-        {{ __('Kelola Menu') }}
-    </flux:navlist.item>
-    
-</flux:navlist.group>
+            </flux:navlist.group>
             {{-- ======================== END: BAGIAN MENU UTAMA ======================== --}}
-
 
             <flux:spacer />
 
